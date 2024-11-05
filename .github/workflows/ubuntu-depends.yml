@@ -1,5 +1,6 @@
 on:
   push
+
 jobs:
   ubuntu20-depends:
     runs-on: ubuntu-20.04
@@ -7,20 +8,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Update apt repos
-        run: sudo apt-get update
+      - name: Update and install base dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential xutils-dev libtool gperf autotools-dev automake \
+            pkg-config bsdmainutils libattr1-dev make automake bison byacc \
+            cmake curl g++-multilib binutils-gold python3
 
-      - name: Install base dependencies
-        run: sudo apt-get install build-essential xutils-dev libtool gperf autotools-dev automake pkg-config bsdmainutils libattr1-dev make automake bison byacc cmake curl g++-multilib binutils-gold bison byacc python3
+      - name: Set CFLAGS and CXXFLAGS
+        run: |
+          export CFLAGS="$CFLAGS -Wno-error=implicit-fallthrough"
+          export CXXFLAGS="$CXXFLAGS -Wno-error=implicit-fallthrough"
 
       - name: Build depends
-        run: cd depends/ && make -j4 HOST=x86_64-linux-gnu
+        run: |
+          cd depends
+          make -j2 V=1 HOST=x86_64-linux-gnu
 
       - name: Auto generate
         run: ./autogen.sh
 
-      - name: configure
-        run: CONFIG_SITE=$PWD/depends/x86_64-linux-gnu/share/config.site ./configure --enable-gui --disable-bench --disable-tests --disable-dependency-tracking --disable-werror --prefix=`pwd`/depends/x86_64-linux-gnu
+      - name: Configure build
+        run: |
+          CONFIG_SITE=$PWD/depends/x86_64-linux-gnu/share/config.site \
+          ./configure --enable-gui --disable-bench --disable-tests \
+          --disable-dependency-tracking --disable-werror \
+          --prefix=$(pwd)/depends/x86_64-linux-gnu
 
-      - name: make
-        run: make -j4
+      - name: Compile
+        run: make -j2
