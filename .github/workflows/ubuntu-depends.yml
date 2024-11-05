@@ -1,42 +1,40 @@
+name: Build TokenPay
+
 on:
   push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  ubuntu20-depends:
-    runs-on: ubuntu-20.04
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - name: Update and install base dependencies
+      - name: Set up dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y \
-            build-essential xutils-dev libtool gperf autotools-dev automake \
-            pkg-config bsdmainutils libattr1-dev make automake bison byacc \
-            cmake curl g++-multilib binutils-gold python3 \
-            xmlto fop xsltproc libfontconfig1-dev libfreetype6-dev \
-            libx11-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
-            libxcb1-dev libx11-xcb-dev libxcb-glx0-dev
-
-      - name: Set CFLAGS and CXXFLAGS
-        run: |
-          export CFLAGS="$CFLAGS -Wno-error=implicit-fallthrough -Wno-deprecated-copy"
-          export CXXFLAGS="$CXXFLAGS -Wno-error=implicit-fallthrough -Wno-deprecated-copy"
-
-      - name: Build depends
-        run: |
+          # Navigate to the depends directory
           cd depends
-          make -j2 V=1 HOST=x86_64-linux-gnu
+          # Run your build scripts to compile dependencies, if any
+          make all
 
-      - name: Auto generate
-        run: ./autogen.sh
-
-      - name: Configure build
+      - name: Build the project
         run: |
-          CONFIG_SITE=$PWD/depends/x86_64-linux-gnu/share/config.site \
-          ./configure --enable-gui --disable-bench --disable-tests \
-          --disable-dependency-tracking --disable-werror \
-          --prefix=$(pwd)/depends/x86_64-linux-gnu
+          # Navigate to the root of your project
+          cd ..
+          # Set any necessary environment variables
+          export PATH="$PATH:$(pwd)/depends/x86_64-linux-gnu/bin"
+          export LD_LIBRARY_PATH="$(pwd)/depends/x86_64-linux-gnu/lib:$LD_LIBRARY_PATH"
+          
+          # Run the build commands, assuming you have a Makefile or similar setup
+          make -C depends/x86_64-linux-gnu
 
-      - name: Compile
-        run: make -j2
+      - name: Run tests
+        run: |
+          # Assuming you have tests to run after building
+          make test
